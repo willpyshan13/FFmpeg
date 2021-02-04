@@ -1,7 +1,5 @@
 /*
- * Header file for hardcoded AAC SBR windows
- *
- * Copyright (c) 2014 Reimar Döffinger <Reimar.Doeffinger@gmx.de>
+ * Copyright (c) 2020
  *
  * This file is part of FFmpeg.
  *
@@ -20,9 +18,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVCODEC_AACSBR_TABLEGEN_H
-#define AVCODEC_AACSBR_TABLEGEN_H
+#ifndef AVFILTER_DNN_SAFE_QUEUE_H
+#define AVFILTER_DNN_SAFE_QUEUE_H
 
-#include "aacsbr_tablegen_common.h"
+typedef struct SafeQueue SafeQueue;
 
-#endif /* AVCODEC_AACSBR_TABLEGEN_H */
+SafeQueue *ff_safe_queue_create(void);
+void ff_safe_queue_destroy(SafeQueue *sq);
+
+size_t ff_safe_queue_size(SafeQueue *sq);
+
+int ff_safe_queue_push_front(SafeQueue *sq, void *v);
+int ff_safe_queue_push_back(SafeQueue *sq, void *v);
+
+void *ff_safe_queue_pop_front(SafeQueue *sq);
+
+#endif

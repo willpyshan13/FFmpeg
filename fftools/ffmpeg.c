@@ -136,6 +136,7 @@ static int nb_frames_dup = 0;
 static unsigned dup_warning = 1000;
 static int nb_frames_drop = 0;
 static int64_t decode_error_stat[2];
+static unsigned nb_output_dumped = 0;
 
 static int want_sdp = 1;
 
@@ -393,8 +394,30 @@ static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 }
 #endif
 
+#ifdef __linux__
+#define SIGNAL(sig, func)               \
+    do {                                \
+        action.sa_handler = func;       \
+        sigaction(sig, &action, NULL);  \
+    } while (0)
+#else
+#define SIGNAL(sig, func) \
+    signal(sig, func)
+#endif
+
 void term_init(void)
 {
+#if defined __linux__
+    struct sigaction action = {0};
+    action.sa_handler = sigterm_handler;
+
+    /* block other interrupts while processing this one */
+    sigfillset(&action.sa_mask);
+
+    /* restart interruptible functions (i.e. don't fail with EINTR)  */
+    action.sa_flags = SA_RESTART;
+#endif
+
 #if HAVE_TERMIOS_H
     if (!run_as_daemon && stdin_interaction) {
         struct termios tty;
@@ -413,14 +436,14 @@ void term_init(void)
 
             tcsetattr (0, TCSANOW, &tty);
         }
-        signal(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
+        SIGNAL(SIGQUIT, sigterm_handler); /* Quit (POSIX).  */
     }
 #endif
 
-    signal(SIGINT , sigterm_handler); /* Interrupt (ANSI).    */
-    signal(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
+    SIGNAL(SIGINT , sigterm_handler); /* Interrupt (ANSI).    */
+    SIGNAL(SIGTERM, sigterm_handler); /* Termination (ANSI).  */
 #ifdef SIGXCPU
-    signal(SIGXCPU, sigterm_handler);
+    SIGNAL(SIGXCPU, sigterm_handler);
 #endif
 #ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN); /* Broken pipe (POSIX). */
@@ -1685,6 +1708,7 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     double speed;
     int64_t pts = INT64_MIN + 1;
     static int64_t last_time = -1;
+    static int first_report = 1;
     static int qp_histogram[52];
     int hours, mins, secs, us;
     const char *hours_sign;
@@ -1697,9 +1721,9 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
     if (!is_last_report) {
         if (last_time == -1) {
             last_time = cur_time;
-            return;
         }
-        if ((cur_time - last_time) < 500000)
+        if (((cur_time - last_time) < stats_period && !first_report) ||
+            (first_report && nb_output_dumped < nb_output_files))
             return;
         last_time = cur_time;
     }
@@ -1875,6 +1899,8 @@ static void print_report(int is_last_report, int64_t timer_start, int64_t cur_ti
                        "Error closing progress log, loss of information possible: %s\n", av_err2str(ret));
         }
     }
+
+    first_report = 0;
 
     if (is_last_report)
         print_final_stats(total_size);
@@ -3015,6 +3041,7 @@ static int check_init_output_file(OutputFile *of, int file_index)
     of->header_written = 1;
 
     av_dump_format(of->ctx, file_index, of->ctx->url, 1);
+    nb_output_dumped++;
 
     if (sdp_filename || want_sdp)
         print_sdp();
@@ -4005,11 +4032,7 @@ static int check_keyboard_interaction(int64_t cur_time)
         if(key == 'D') {
             debug = input_streams[0]->dec_ctx->debug << 1;
             if(!debug) debug = 1;
-            while(debug & (FF_DEBUG_DCT_COEFF
-#if FF_API_DEBUG_MV
-                                             |FF_DEBUG_VIS_QP|FF_DEBUG_VIS_MB_TYPE
-#endif
-                                                                                  )) //unsupported, would just crash
+            while (debug & FF_DEBUG_DCT_COEFF) //unsupported, would just crash
                 debug += debug;
         }else{
             char buf[32];

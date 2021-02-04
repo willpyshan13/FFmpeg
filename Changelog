@@ -52,6 +52,18 @@ version <next>:
 - Microsoft Paint (MSP) version 2 decoder
 - Microsoft Paint (MSP) demuxer
 - AV1 monochrome encoding support via libaom >= 2.0.1
+- asuperpass and asuperstop filter
+- shufflepixels filter
+- tmidequalizer filter
+- estdif filter
+- epx filter
+- Dolby E parser
+- shear filter
+- kirsch filter
+- colortemperature filter
+- colorcontrast filter
+- PFM encoder
+- colorcorrect filter
 
 
 version 4.3:

@@ -142,6 +142,11 @@ struct AVFormatInternal {
      * Prefer the codec framerate for avg_frame_rate computation.
      */
     int prefer_codec_framerate;
+
+    /**
+     * Set if chapter ids are strictly monotonic.
+     */
+    int chapter_ids_monotonic;
 };
 
 struct AVStreamInternal {
@@ -359,8 +364,6 @@ do {\
     av_dynarray_add((tab), nb_ptr, (elem));\
 } while(0)
 #endif
-
-struct tm *ff_brktimegm(time_t secs, struct tm *tm);
 
 /**
  * Automatically create sub-directories

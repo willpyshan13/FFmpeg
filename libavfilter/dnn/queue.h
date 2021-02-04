@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2020
+ *
  * This file is part of FFmpeg.
  *
  * FFmpeg is free software; you can redistribute it and/or
@@ -16,6 +18,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#define FFT_FLOAT 0
-#define AVFFT 0
-#include "fft.c"
+
+#ifndef AVFILTER_DNN_QUEUE_H
+#define AVFILTER_DNN_QUEUE_H
+
+typedef struct Queue Queue;
+
+Queue *ff_queue_create(void);
+void ff_queue_destroy(Queue *q);
+
+size_t ff_queue_size(Queue *q);
+
+void *ff_queue_peek_front(Queue *q);
+void *ff_queue_peek_back(Queue *q);
+
+int ff_queue_push_front(Queue *q, void *v);
+int ff_queue_push_back(Queue *q, void *v);
+
+void *ff_queue_pop_front(Queue *q);
+void *ff_queue_pop_back(Queue *q);
+
+#endif
